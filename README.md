@@ -8,6 +8,8 @@ Telegram-бот для поиска **возможных публичных со
 
 ## Запуск
 
+Если запускаете на Bothost и видите `No module named 'echo'`, используйте [инструкцию Bothost](docs/bothost.md): свой Dockerfile, пересборка, окружение вне `/app` и режим одного контейнера `serve`.
+
 Нужны Docker Engine/Desktop с Linux containers и Docker Compose v2.20+, Linux kernel с Landlock ABI ≥3 и seccomp, исходящий HTTPS/DNS, Telegram Bot Token и строка подключения PostgreSQL. Для eco ориентир — сервер с 4 ГБ RAM и местом для образов и данных. Домен, веб-сервер и входящие порты не нужны.
 
 ```powershell
@@ -72,7 +74,7 @@ HTTP-проверки движков направлены **только на л
 
 ```sh
 uv sync --frozen --extra dev
-uv run --frozen ruff check src engines tools tests scripts migrations
+uv run --frozen ruff check main.py src engines tools tests scripts migrations
 uv run --frozen pytest -q
 ```
 
@@ -81,6 +83,7 @@ uv run --frozen pytest -q
 ## Документация
 
 - [Архитектура](docs/architecture.md), [развёртывание](docs/deployment.md), [диагностика](docs/troubleshooting.md)
+- [Развёртывание на Bothost и ошибка импорта](docs/bothost.md)
 - [Шесть модулей, папки, профили и обновление инструментов](docs/modules.md)
 - [Приватность и удаление](docs/privacy.md), [DeepSeek, кэш и бюджет](docs/ai.md)
 - [Отчёты и age](docs/export.md), [обновление движков](docs/engines.md)

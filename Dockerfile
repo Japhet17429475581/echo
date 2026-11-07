@@ -6,6 +6,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends age fonts-dejav
     libimage-exiftool-perl tesseract-ocr tesseract-ocr-eng tesseract-ocr-rus whatweb file libseccomp2 \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
+ENV UV_PROJECT_ENVIRONMENT=/opt/echo
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project
 COPY engines/sherlock/requirements.lock /tmp/sherlock.lock
@@ -19,15 +20,15 @@ COPY engines/runner.py engines/runner.py
 COPY tools tools
 COPY assets/echo assets/echo
 COPY migrations migrations
-COPY alembic.ini ./
+COPY alembic.ini main.py ./
 COPY LICENSE NOTICE THIRD_PARTY_LICENSES.md ./
 COPY licenses licenses
 RUN uv sync --frozen --no-dev && useradd --uid 10001 --create-home echo \
-    && mkdir -p /tmp/echo /data/echo && chown echo:echo /tmp/echo /data/echo && chmod 0700 /tmp/echo /data/echo
-ENV PATH="/app/.venv/bin:$PATH" ECHO_TEMP_DIR=/tmp/echo
+    && mkdir -p /tmp/echo /data/echo /app/data && chown echo:echo /tmp/echo /data/echo /app/data && chmod 0700 /tmp/echo /data/echo /app/data
+ENV PATH="/opt/echo/bin:$PATH" ECHO_TEMP_DIR=/tmp/echo
 USER 10001:10001
 ENTRYPOINT ["/usr/bin/tini", "--"]
-CMD ["python", "-m", "echo.main", "bot"]
+CMD ["/opt/echo/bin/python", "-m", "echo.main", "serve"]
 
 FROM base AS test
 USER root

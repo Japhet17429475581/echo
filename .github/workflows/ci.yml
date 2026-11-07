@@ -21,8 +21,8 @@ jobs:
         with: {version: "0.12.17"}
       - run: sudo apt-get update && sudo apt-get install -y age fonts-dejavu-core
       - run: uv sync --frozen --extra dev
-      - run: uv run --frozen ruff check src engines tools tests scripts migrations
-      - run: uv run --frozen ruff format --check src engines tools tests scripts migrations
+      - run: uv run --frozen ruff check main.py src engines tools tests scripts migrations
+      - run: uv run --frozen ruff format --check main.py src engines tools tests scripts migrations
       - run: uv venv .venv-sherlock && uv pip install --python .venv-sherlock/bin/python --require-hashes -r engines/sherlock/requirements.lock
       - run: uv venv .venv-maigret && uv pip install --python .venv-maigret/bin/python --require-hashes -r engines/maigret/requirements.lock
       - run: uv run --frozen pytest -q
@@ -33,5 +33,6 @@ jobs:
           ECHO_TEST_MAIGRET_PYTHON: .venv-maigret/bin/python
           ECHO_TEST_LIVE_ENGINES: "1"
       - run: docker build --target runtime -t echo-bot:ci .
+      - run: docker run --rm --mount type=bind,source="$PWD",target=/app,readonly echo-bot:ci /usr/local/bin/python /app/main.py --help
       - run: docker build --target test -t echo-bot:test .
       - run: docker run --rm echo-bot:test

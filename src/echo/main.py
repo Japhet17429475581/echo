@@ -44,6 +44,15 @@ def configure_logs():
 
 async def run(args):
     config = settings()
+    if args.command == "serve":
+        if not config.bot_token.get_secret_value():
+            logging.getLogger("echo").error("ECHO_BOT_TOKEN or BOT_TOKEN is required")
+            raise ValueError("bot_token_missing")
+        if "data_dir" not in config.model_fields_set:
+            config.data_dir = Path("/app/data/echo")
+        from echo.hosting import migrate
+
+        await migrate()
     engine, sessions = session_factory(config.database_url)
     redis = Redis.from_url(config.redis_url, decode_responses=True)
     gateway = Gateway(config, redis, sessions)
@@ -101,6 +110,15 @@ async def run(args):
             await seed_catalog(sessions)
             if args.command == "bot":
                 await Telegram(config, jobs, redis, Reports(jobs, config), gateway, admin).run()
+            elif args.command == "serve":
+                from echo.hosting import supervise
+
+                await redis.ping()
+                logging.getLogger("echo").warning("starting_bot_and_worker")
+                await supervise(
+                    Telegram(config, jobs, redis, Reports(jobs, config), gateway, admin).run(),
+                    Worker(config, jobs, redis, catalog).run(),
+                )
             else:
                 worker = asyncio.create_task(Worker(config, jobs, redis, catalog).run())
                 loop = asyncio.get_running_loop()
@@ -118,7 +136,7 @@ async def run(args):
 def main():
     parser = argparse.ArgumentParser(prog="echo-bot")
     commands = parser.add_subparsers(dest="command", required=True)
-    for name in ("bot", "worker", "seed", "admin", "cleanup", "catalog-list"):
+    for name in ("bot", "worker", "serve", "seed", "admin", "cleanup", "catalog-list"):
         commands.add_parser(name)
     health = commands.add_parser("health")
     health.add_argument("--worker", action="store_true")

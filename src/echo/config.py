@@ -1,18 +1,23 @@
+import os
 from functools import lru_cache
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from pydantic import Field, SecretStr, field_validator, model_validator
+from pydantic import AliasChoices, Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from echo.database import normalize_database_url
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore", env_prefix="ECHO_")
+    model_config = SettingsConfigDict(
+        env_file=".env", extra="ignore", env_prefix="ECHO_", populate_by_name=True
+    )
 
     brand: str = Field(default="Echo", min_length=1, max_length=40)
-    bot_token: SecretStr = SecretStr("")
+    bot_token: SecretStr = Field(
+        default=SecretStr(""), validation_alias=AliasChoices("ECHO_BOT_TOKEN", "BOT_TOKEN")
+    )
     database_url: str = "postgresql+asyncpg://echo:echo@postgres/echo"
     redis_url: str = "redis://redis:6379/0"
     admins: str = ""
@@ -120,6 +125,12 @@ class Settings(BaseSettings):
     catalog_negative_ttl_hours: int = Field(6, ge=1)
     catalog_lock_seconds: int = Field(180, ge=30)
     source_max_bytes: int = Field(200_000, ge=1000, le=1_000_000)
+
+    @field_validator("bot_token", mode="before")
+    @classmethod
+    def hosting_bot_token(cls, value):
+        text = value.get_secret_value() if isinstance(value, SecretStr) else value
+        return value if text else os.environ.get("BOT_TOKEN", "")
 
     @field_validator("database_url")
     @classmethod

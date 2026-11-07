@@ -56,6 +56,7 @@ def landlock(libc, work):
             ("/lib", read_access),
             ("/lib64", read_access),
             ("/opt/tools", read_access),
+            ("/opt/echo", read_access),
             ("/app/.venv", read_access),
             ("/app/src", read_access),
             (os.path.dirname(__file__), read_access),

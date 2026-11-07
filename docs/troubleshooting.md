@@ -2,6 +2,8 @@
 
 ## Контейнер не стартует
 
+`No module named 'echo'` на Bothost: исходники монтируются в `/app` и скрывают окружение, если оно было собрано внутри `/app/.venv`. Исправленный образ хранит окружение в `/opt/echo`. Включите свой Dockerfile и пересоберите деплой из актуальной ветки `main`. Точка входа — корневой `main.py` или CMD из Dockerfile; полный порядок — [bothost.md](bothost.md).
+
 `docker compose ps`, затем `docker compose logs --tail=50 migrate worker bot`. Ошибки выводятся безопасным типом без секретов. Убедитесь, что Docker Desktop работает в Linux mode, установлен Compose v2.20+, `.env` создан, `ECHO_DATABASE_URL` содержит готовую строку PostgreSQL, а токен получен для вашего бота. Спецсимволы в пароле строки должны быть URL-encoded; сохраняйте параметры SSL, указанные провайдером. Отдельная Windows-ошибка `docker compose` может означать отсутствие CLI plugin в конфигурации Docker.
 
 `migrate` должен завершиться с кодом 0. Проверка БД/Redis из приложения: `docker compose run --rm --no-deps worker python -m echo.main health`. Для внешней БД проверьте её доступность, SSL и правила сетевого доступа у провайдера. Только при использовании `local-db`: `docker compose --profile local-db exec postgres pg_isready -U echo -d echo`. Redis: `docker compose exec redis redis-cli ping`. Не публикуйте их порты для диагностики.

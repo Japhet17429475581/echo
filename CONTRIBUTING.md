@@ -5,8 +5,8 @@
 Python 3.12. `uv sync --frozen --extra dev`. Все изменения контрактов движков проверяйте с их зафиксированными отдельными окружениями. Тесты используют синтетический ник, локальный HTTP-сервер, подмену Telegram/DeepSeek и изолированные схемы PostgreSQL. Не используйте реальные персональные поиски или платные ключи в CI.
 
 ```sh
-uv run --frozen ruff check src engines tools tests scripts migrations
-uv run --frozen ruff format --check src engines tools tests scripts migrations
+uv run --frozen ruff check main.py src engines tools tests scripts migrations
+uv run --frozen ruff format --check main.py src engines tools tests scripts migrations
 uv run --frozen pytest -q
 docker compose -f compose.test.yaml up --build --abort-on-container-exit --exit-code-from tests
 ```
