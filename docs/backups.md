@@ -2,10 +2,10 @@
 
 Результаты приватны; не отправляйте незашифрованные backups в общедоступное хранилище. Ниже команды оператора для собственного развёртывания. Выполняйте их в защищённом каталоге; `backup.age` нельзя хранить вместе с приватной identity. В Windows PowerShell 5 текстовое перенаправление может повредить бинарный dump — выполняйте pipeline внутри Linux/WSL или контейнера.
 
-Linux/WSL:
+Для внешней PostgreSQL используйте резервные копии провайдера либо штатные `pg_dump`/`pg_restore` с её подключением и SSL-настройками. Примеры ниже относятся к необязательному профилю **local-db** и выполняются в Linux/WSL:
 
 ```sh
-docker compose exec -T postgres pg_dump -U echo -d echo -Fc | age -r age1YOUR_PUBLIC_RECIPIENT > echo-backup.dump.age
+docker compose --profile local-db exec -T postgres pg_dump -U echo -d echo -Fc | age -r age1YOUR_PUBLIC_RECIPIENT > echo-backup.dump.age
 ```
 
 Сохраняйте `.env` отдельно в хранилище секретов. Redis AOF живёт в именованном volume: для согласованной копии остановите bot/worker и Redis, затем архивируйте volume инструментами оператора. Сохранение Redis важно для бюджетов: его сброс в течение суток может обнулить расходные ограничения. При потере Redis временно выключите AI до сверки с провайдером/следующих UTC-суток.
@@ -17,7 +17,7 @@ docker compose exec -T postgres pg_dump -U echo -d echo -Fc | age -r age1YOUR_PU
 Восстановление в **новую** пустую БД после остановки приложения:
 
 ```sh
-age -d -i identity.txt echo-backup.dump.age | docker compose exec -T postgres pg_restore -U echo -d echo --no-owner --no-privileges
+age -d -i identity.txt echo-backup.dump.age | docker compose --profile local-db exec -T postgres pg_restore -U echo -d echo --no-owner --no-privileges
 docker compose run --rm migrate
 docker compose run --rm worker python -m echo.main cleanup
 ```

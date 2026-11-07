@@ -1,6 +1,6 @@
 # Configuration and limits
 
-All application variables use the ECHO_ prefix. Changes require restarting bot/worker. Pydantic validates bounds at startup. POSTGRES_PASSWORD is consumed by Compose and must be a long random alphanumeric password.
+All application variables use the ECHO_ prefix. Changes require restarting bot/worker. Pydantic validates bounds at startup. The default deployment requires one provider-supplied ECHO_DATABASE_URL, rather than a separate database password. Schemes postgres://, postgresql:// and postgresql+asyncpg:// are accepted. Native asyncpg DSN options, including sslmode and certificate settings, are preserved. LOCAL_POSTGRES_PASSWORD is only used to initialise the optional local-db Compose profile.
 
 Daily budgets use UTC, independently of the report timezone. Timeouts are seconds; size and memory limits are MiB. An unset price means unknown monetary cost; hard request and output limits remain active. Set both prices and their verification date together.
 
@@ -116,6 +116,7 @@ Daily budgets use UTC, independently of the report timezone. Timeouts are second
 
 ## Behaviour
 
+- The .env template only asks for ECHO_AI_KEY to configure the DeepSeek connection; the provider URL and model already have defaults in code. ECHO_AI_ENABLED and personal consent still control whether requests are allowed. Endpoint/model overrides below are optional advanced settings, not required .env fields.
 - RECENT_RESULT_MINUTES limits suggestions to your own retained completed/partial username and URL checks with matching options. The user chooses whether to reuse or explicitly rerun. This never shares results between owners.
 - BATCH_MAX_CARDS bounds selection size; MAX_FOLDER_ITEMS still bounds destination capacity. Batch saves are atomic and idempotent per confirmation/workspace, and preserve point-in-time personal annotations.
 - Eco validates one global RUNNING job, one active job per user, one heavy slot, sequential engines and one OCR thread. Standard changes are explicit; keep all bot/worker replicas consistent. See modules.md for Compose memory budgets.

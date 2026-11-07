@@ -21,7 +21,7 @@ services:
     image: echo-bot:test
     build: {context: ., target: test}
     environment:
-      ECHO_DATABASE_URL: postgresql+asyncpg://echo:test_only@postgres/echo_test
+      ECHO_DATABASE_URL: postgresql://echo:test_only@postgres/echo_test?sslmode=disable
       ECHO_TEST_DATABASE_URL: postgresql+asyncpg://echo:test_only@postgres/echo_test
       ECHO_TEST_REDIS_URL: redis://redis:6379/15
       ECHO_TEST_LIVE_ENGINES: "1"

@@ -37,7 +37,7 @@ JSON-object, enum, `extra=forbid`, пределы длины и числа эл�
 
 ## Настройки и наблюдение
 
-Все `ECHO_AI_*`, `ECHO_CATALOG_*`, `ECHO_SOURCE_MAX_BYTES` перечислены в `configuration.md`. Модель и endpoint сменяемые; запрос использует документированные `response_format={type:json_object}` и `max_tokens`, текущий default — `deepseek-flash`, без зашитой цены.
+В `.env` для подключения DeepSeek нужен только `ECHO_AI_KEY`: endpoint и модель уже заданы внутри приложения. `ECHO_AI_ENABLED` и пользовательское согласие управляют разрешением запросов. Все `ECHO_AI_*`, `ECHO_CATALOG_*`, `ECHO_SOURCE_MAX_BYTES` перечислены в `configuration.md`; расширенные endpoint/model overrides остаются необязательными. Запрос использует документированные `response_format={type:json_object}` и `max_tokens`, текущий default — `deepseek-flash`, без зашитой цены.
 
 `/admin` либо `python -m echo.main admin`: cache hit rate, число внешних попыток, известный usage, время, outcomes, резерв/расход, остаток бюджета и circuit breaker. Таблица `ai_calls` не хранит prompt или ответ. Для сверки суммируйте `attempts`, проверяйте `estimated` и сравнивайте с кабинетом провайдера.
 

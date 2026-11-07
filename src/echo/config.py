@@ -5,6 +5,8 @@ from zoneinfo import ZoneInfo
 from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from echo.database import normalize_database_url
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore", env_prefix="ECHO_")
@@ -118,6 +120,11 @@ class Settings(BaseSettings):
     catalog_negative_ttl_hours: int = Field(6, ge=1)
     catalog_lock_seconds: int = Field(180, ge=30)
     source_max_bytes: int = Field(200_000, ge=1000, le=1_000_000)
+
+    @field_validator("database_url")
+    @classmethod
+    def valid_database_url(cls, value: str) -> str:
+        return normalize_database_url(value)
 
     @field_validator("timezone")
     @classmethod

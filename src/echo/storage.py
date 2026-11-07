@@ -2,9 +2,10 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import JSON, BigInteger, Boolean, DateTime, ForeignKey, Index, Integer, String, Text
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
+from echo.database import database_engine
 from echo.domain import now
 
 
@@ -162,5 +163,5 @@ class AICall(Base):
 
 
 def session_factory(url: str):
-    engine = create_async_engine(url, pool_pre_ping=True, hide_parameters=True)
+    engine = database_engine(url)
     return engine, async_sessionmaker(engine, expire_on_commit=False)

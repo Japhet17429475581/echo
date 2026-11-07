@@ -8,20 +8,20 @@ Telegram-бот для поиска **возможных публичных со
 
 ## Запуск
 
-Нужны Docker Engine/Desktop с Linux containers и Docker Compose v2, Linux kernel с Landlock ABI ≥3 и seccomp, исходящий HTTPS/DNS и Telegram Bot Token, созданный вами у BotFather. Для eco ориентир — сервер с 4 ГБ RAM и местом для образов и данных. Домен, веб-сервер и входящие порты не нужны.
+Нужны Docker Engine/Desktop с Linux containers и Docker Compose v2.20+, Linux kernel с Landlock ABI ≥3 и seccomp, исходящий HTTPS/DNS, Telegram Bot Token и строка подключения PostgreSQL. Для eco ориентир — сервер с 4 ГБ RAM и местом для образов и данных. Домен, веб-сервер и входящие порты не нужны.
 
 ```powershell
 Copy-Item .env.example .env
-# Отредактируйте .env: ECHO_BOT_TOKEN и POSTGRES_PASSWORD.
+# Отредактируйте .env: ECHO_BOT_TOKEN и ECHO_DATABASE_URL.
 docker compose up -d --build
 docker compose ps
 ```
 
-Linux/macOS: `cp .env.example .env`, затем те же команды Docker. Пароль PostgreSQL в данном Compose должен быть длинным, случайным и буквенно-цифровым: он включается в URI. Не используйте значение-пример. `.env` не хранится в Git. Бот не запускается без токена.
+Linux/macOS: `cp .env.example .env`, затем те же команды Docker. В `ECHO_DATABASE_URL` вставьте готовую строку провайдера: `postgresql://USER:PASSWORD@HOST:5432/DATABASE?sslmode=require`. Также поддерживаются `postgres://…` и `postgresql+asyncpg://…`; SSL-параметры обрабатываются драйвером. Спецсимволы в логине/пароле должны быть закодированы в URL. `.env` не хранится в Git. Бот не запускается без токена.
 
-Миграции выполняет отдельный сервис `migrate`. `bot` использует polling, `worker` обрабатывает общую очередь и каталог. PostgreSQL и Redis не имеют опубликованных портов. Контейнеры приложения непривилегированные, с файловой системой только для чтения, временным tmpfs и общим файловым volume. В eco одна тяжёлая задача на весь deployment, оба поисковых движка выполняются последовательно. Для standard: `docker compose -f compose.yaml -f compose.standard.yaml up -d --build --scale worker=2` на сервере с достаточной RAM; [бюджет ресурсов и ограничения](docs/modules.md).
+Миграции выполняет отдельный сервис `migrate`. `bot` использует polling, `worker` обрабатывает общую очередь и каталог. По умолчанию подключается ваша PostgreSQL по строке из `.env`, Redis запускается без опубликованного порта. Локальная PostgreSQL доступна отдельно через профиль `local-db` ([инструкция](docs/deployment.md)). Контейнеры приложения непривилегированные, с файловой системой только для чтения, временным tmpfs и общим файловым volume. В eco одна тяжёлая задача на весь deployment, оба поисковых движка выполняются последовательно. Для standard: `docker compose -f compose.yaml -f compose.standard.yaml up -d --build --scale worker=2` на сервере с достаточной RAM; [бюджет ресурсов и ограничения](docs/modules.md).
 
-DeepSeek **не обязателен**. Для включения задайте `ECHO_AI_ENABLED=true`, `ECHO_AI_KEY`; пользователь отдельно включает AI в `/settings`. `ECHO_AI_INTENTS=false` по умолчанию. Для денежного учёта дополнительно задайте оба тарифа за миллион токенов и дату их проверки; без них действуют проверяемые ограничения числа запросов и максимального вывода.
+DeepSeek **не обязателен**. Для подключения достаточно API-токена `ECHO_AI_KEY`: адрес сервиса и модель уже заданы внутри приложения, в `.env` их указывать не нужно. Для разрешения обращений задайте `ECHO_AI_ENABLED=true`; пользователь отдельно включает AI в `/settings`. `ECHO_AI_INTENTS=false` по умолчанию. Для денежного учёта дополнительно задайте оба тарифа за миллион токенов и дату их проверки; без них действуют проверяемые ограничения числа запросов и максимального вывода.
 
 ## Использование
 
