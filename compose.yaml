@@ -5,9 +5,11 @@ x-app: &app
     context: .
     target: runtime
   env_file: .env
+  user: "10001:10001"
   environment:
     ECHO_DATABASE_URL: ${ECHO_DATABASE_URL:?Set ECHO_DATABASE_URL in .env}
     ECHO_REDIS_URL: redis://redis:6379/0
+    ECHO_DATA_DIR: ${ECHO_DATA_DIR:-/data/echo}
   networks: [backend, outbound]
   volumes: [files:/data/echo]
   restart: unless-stopped

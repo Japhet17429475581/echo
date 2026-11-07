@@ -6,6 +6,7 @@ import shutil
 import uuid
 
 from echo.catalog import identity
+from echo.diagnostics import failure
 from echo.domain import Engine
 from echo.engines import Adapter, DomainLimiter, EngineError
 from echo.modules import ModuleError
@@ -226,34 +227,50 @@ class Worker:
                 log.warning("enrichment_iteration_failed")
                 await asyncio.sleep(3)
 
-    async def housekeeping(self):
-        while True:
+    async def cleanup_scratch(self):
+        # Crashed-process leftovers contain no exports; each child gets a private directory.
+        root = self.config.temp_dir.resolve()
+        root.mkdir(parents=True, exist_ok=True, mode=0o700)
+        for path in [*root.glob("engine-*"), *root.glob("module-*")]:
+            resolved = path.resolve()
+            marker = resolved / "lease.json"
+            if resolved.parent != root or path.is_symlink() or not marker.is_file():
+                continue
             try:
-                await self.redis.set("echo:worker:" + self.id, "alive", ex=30)
-                await self.redis.set("echo:tools:" + self.id, json.dumps(self.capabilities), ex=30)
-                await self.jobs.cleanup()
-                await self.tasks.vault.janitor()
-                # Crashed-process leftovers contain no exports; each child gets a private directory.
-                root = self.config.temp_dir.resolve()
-                root.mkdir(parents=True, exist_ok=True, mode=0o700)
-                for path in [*root.glob("engine-*"), *root.glob("module-*")]:
-                    resolved = path.resolve()
-                    marker = resolved / "lease.json"
-                    if resolved.parent != root or path.is_symlink() or not marker.is_file():
-                        continue
-                    try:
-                        record = json.loads(await asyncio.to_thread(marker.read_text, "utf-8"))
-                        async with self.jobs.sessions() as s:
-                            active = await s.get(Job, record["job"])
-                        if active and active.lease == record["lease"]:
-                            continue
-                        await asyncio.to_thread(shutil.rmtree, resolved)
-                    except (OSError, ValueError, KeyError):
-                        continue
+                record = json.loads(await asyncio.to_thread(marker.read_text, "utf-8"))
+                async with self.jobs.sessions() as s:
+                    active = await s.get(Job, record["job"])
+                if active and active.lease == record["lease"]:
+                    continue
+                await asyncio.to_thread(shutil.rmtree, resolved)
+            except (OSError, ValueError, KeyError):
+                continue
+
+    async def cleanup_once(self):
+        operations = (
+            ("heartbeat", lambda: self.redis.set("echo:worker:" + self.id, "alive", ex=30)),
+            (
+                "capabilities",
+                lambda: self.redis.set("echo:tools:" + self.id, json.dumps(self.capabilities), ex=30),
+            ),
+            ("jobs", self.jobs.cleanup),
+            ("files", self.tasks.vault.janitor),
+            ("scratch", self.cleanup_scratch),
+        )
+        successful = True
+        for stage, operation in operations:
+            try:
+                await operation()
             except asyncio.CancelledError:
                 raise
-            except Exception:
-                log.warning("cleanup_failed")
+            except Exception as error:
+                successful = False
+                failure(log, "cleanup_failed", stage, error)
+        return successful
+
+    async def housekeeping(self):
+        while True:
+            await self.cleanup_once()
             await asyncio.sleep(min(10, self.config.cleanup_interval))
 
     async def run(self):

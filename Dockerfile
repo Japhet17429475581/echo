@@ -40,3 +40,8 @@ ENV ECHO_TEST_SHERLOCK_PYTHON=/opt/sherlock/bin/python ECHO_TEST_MAIGRET_PYTHON=
 CMD ["pytest", "-q", "-p", "no:cacheprovider"]
 
 FROM base AS runtime
+ENV ECHO_DATA_DIR=/app/data/echo
+# Bind mounts can be owned by root regardless of the ownership set during build.
+# Bootstrap prepares only private data/temp directories and drops to UID/GID 10001 before exec.
+USER root
+ENTRYPOINT ["/usr/bin/tini", "--", "/opt/echo/bin/python", "-m", "echo.bootstrap"]
