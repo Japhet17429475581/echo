@@ -23,7 +23,7 @@ COPY migrations migrations
 COPY alembic.ini main.py ./
 COPY LICENSE NOTICE THIRD_PARTY_LICENSES.md ./
 COPY licenses licenses
-RUN uv sync --frozen --no-dev && useradd --uid 10001 --create-home echo \
+RUN uv sync --frozen --no-dev --no-editable && useradd --uid 10001 --create-home echo \
     && mkdir -p /tmp/echo /data/echo /app/data && chown echo:echo /tmp/echo /data/echo /app/data && chmod 0700 /tmp/echo /data/echo /app/data
 ENV PATH="/opt/echo/bin:$PATH" ECHO_TEMP_DIR=/tmp/echo
 USER 10001:10001
@@ -32,7 +32,7 @@ CMD ["/opt/echo/bin/python", "-m", "echo.main", "serve"]
 
 FROM base AS test
 USER root
-RUN uv sync --frozen --extra dev
+RUN uv sync --frozen --extra dev --no-editable
 COPY tests tests
 COPY scripts scripts
 USER 10001:10001

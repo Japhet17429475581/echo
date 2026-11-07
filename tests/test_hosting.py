@@ -9,6 +9,25 @@ from pydantic import SecretStr
 
 from echo.config import Settings
 from echo.hosting import supervise
+from echo.paths import ROOT
+
+
+def test_runtime_bundle_contains_migrations_bridges_and_brand_images():
+    from alembic.config import Config
+    from alembic.script import ScriptDirectory
+
+    from echo.engines import RUNNER
+    from echo.modules import TOOLS_RUNNER
+    from echo.tools_ui import ASSETS, TOOL_ASSETS
+
+    assert RUNNER.is_file() and TOOLS_RUNNER.is_file()
+    assert (TOOLS_RUNNER.parent / "sandbox.py").is_file()
+    assert all((ASSETS / name).is_file() for name in TOOL_ASSETS.values())
+    config = Config(str(ROOT / "alembic.ini"))
+    config.set_main_option("script_location", str(ROOT / "migrations"))
+    scripts = ScriptDirectory.from_config(config)
+    assert len(scripts.get_heads()) == 1
+    assert scripts.get_revision("head") is not None
 
 
 async def test_supervisor_stops_worker_after_bot_stops():

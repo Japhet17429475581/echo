@@ -37,6 +37,14 @@ echo-bot = "echo.main:main"
 [tool.hatch.build.targets.wheel]
 packages = ["src/echo"]
 
+[tool.hatch.build.targets.wheel.force-include]
+"engines/runner.py" = "echo/_runtime/engines/runner.py"
+"tools/runner.py" = "echo/_runtime/tools/runner.py"
+"tools/sandbox.py" = "echo/_runtime/tools/sandbox.py"
+"assets/echo" = "echo/_runtime/assets/echo"
+"migrations" = "echo/_runtime/migrations"
+"alembic.ini" = "echo/_runtime/alembic.ini"
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"

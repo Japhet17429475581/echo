@@ -2,9 +2,9 @@
 
 ## Почему возникал ModuleNotFoundError
 
-Bothost монтирует исходники Git в `/app`. Прежнее окружение `/app/.venv`, созданное при сборке, скрывалось этим монтированием. Команда `python -m echo.main` выбирала системный `/usr/local/bin/python`, где пакет не установлен. Ошибка воспроизведена локально с таким же bind mount.
+Bothost монтирует исходники Git в `/app`. Перенос одного virtualenv из `/app/.venv` в `/opt/echo` оказался недостаточным: editable-установка всё ещё ссылалась на `/app/src`. Если содержимое `/app` заменено и `src/echo` недоступен, даже `/opt/echo/bin/python -m echo.main` выдаёт `ModuleNotFoundError`. Это воспроизведено локально с полностью скрытой `/app`.
 
-Приложение и его зависимости теперь установлены в `/opt/echo`, поисковые движки и инструменты — в прежних `/opt/sherlock`, `/opt/maigret`, `/opt/tools`. Код остаётся в `/app/src`. В корне добавлен `main.py`: при запуске системным Python он переключается на `/opt/echo/bin/python`, затем загружает пакет из `src`.
+Приложение теперь устанавливается обычным wheel через `uv sync --no-editable` в `/opt/echo`. В wheel входят код, миграции Alembic, изображения и файлы запуска движков и инструментов. Поисковые движки и библиотеки инструментов остаются в `/opt/sherlock`, `/opt/maigret`, `/opt/tools`. Импорт и ресурсы больше не зависят от содержимого `/app`. Корневой `main.py` переключает системный Python на `/opt/echo/bin/python` и использует установленный пакет; при локальной разработке поддерживается прежняя структура `src`.
 
 Официальное описание монтирования и настройки: [кастомный Dockerfile Bothost](https://bothost.ru/docs/custom-dockerfile), [точка входа](https://bothost.ru/docs/main-file-entrypoint), [переменные окружения](https://bothost.ru/docs/environment-variables), [постоянное хранилище](https://bothost.ru/docs/database-storage).
 
@@ -42,4 +42,10 @@ Bothost передаёт Telegram-токен в `BOT_TOKEN`; ECHO его при�
 /opt/echo/bin/python -m echo.main health --worker
 ```
 
-Команда проверяет БД, Redis и heartbeat worker. Она не проверяет доставку Telegram. Локальные тесты воспроизводят скрытие `/app/.venv`, запуск `/usr/local/bin/python /app/main.py --help`, миграции/worker с подменённым локальным Telegram polling и готовность всех шести инструментов. К аккаунту Bothost владельца автоматического доступа нет: окончательный деплой и доставка с его токеном проверяются после обновления в панели.
+Команда проверяет БД, Redis и heartbeat worker. Она не проверяет доставку Telegram. CI проверяет импорт с полностью скрытой `/app`:
+
+```sh
+docker run --rm --read-only --tmpfs /app:rw,nosuid,nodev,size=1m echo-bot:ci /opt/echo/bin/python -m echo.main --help
+```
+
+Также проверяются корневой launcher, миграции из wheel, worker с подменённым локальным Telegram polling и готовность всех шести инструментов. К аккаунту Bothost владельца автоматического доступа нет: окончательный деплой и доставка с его токеном проверяются после обновления в панели.

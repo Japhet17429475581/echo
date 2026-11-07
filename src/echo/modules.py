@@ -17,10 +17,11 @@ import psutil
 
 from echo.domain import now, safe_url
 from echo.engines import kill_tree
+from echo.paths import ROOT
 from echo.services import as_utc
 from echo.sources import SafeNetwork, public_target
 
-TOOLS_RUNNER = Path(__file__).resolve().parents[2] / "tools/runner.py"
+TOOLS_RUNNER = ROOT / "tools/runner.py"
 
 
 class ModuleError(ValueError):

@@ -10,8 +10,9 @@ from pathlib import Path
 import psutil
 
 from echo.domain import Engine, Observation, Status, normalize
+from echo.paths import ROOT
 
-RUNNER = Path(__file__).resolve().parents[2] / "engines/runner.py"
+RUNNER = ROOT / "engines/runner.py"
 
 
 class EngineError(Exception):

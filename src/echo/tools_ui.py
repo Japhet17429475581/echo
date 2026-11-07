@@ -3,7 +3,6 @@ import hashlib
 import json
 import secrets
 from html import escape
-from pathlib import Path
 
 from aiogram.types import CallbackQuery, CopyTextButton, FSInputFile, InlineKeyboardButton
 from sqlalchemy import func, select
@@ -13,13 +12,14 @@ from echo.engines import DomainLimiter
 from echo.export import fingerprint
 from echo.i18n import tr
 from echo.modules import REGISTRY, ModuleError
+from echo.paths import ROOT
 from echo.presentation import button, keyboard
 from echo.services import Denied, Limited
 from echo.sources import public_target
 from echo.storage import FileObject, WorkspaceItem
 from echo.tasks import Tasks
 
-ASSETS = Path(__file__).resolve().parents[2] / "assets/echo"
+ASSETS = ROOT / "assets/echo"
 TOOL_ASSETS = {module: f"telegram/tools/{module}.png" for module in REGISTRY}
 
 

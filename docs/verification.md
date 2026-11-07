@@ -1,5 +1,13 @@
 # Результаты проверки
 
+## Дополнение 2026-11-08: wheel без зависимости от /app
+
+Повторная ошибка `/opt/echo/bin/python: No module named 'echo'` воспроизведена на предыдущем образе с полностью скрытой `/app`. Причина: editable-установка в `/opt/echo` продолжала ссылаться на `/app/src`. Теперь production и test используют `uv sync --no-editable`, а wheel содержит миграции, изображения и файлы запуска движков/инструментов. При разработке сохраняется поддержка editable checkout.
+
+Полный прогон: **170 passed за 123,09 с**, одна deprecation-подсказка Alembic о `path_separator`; `alembic check` без расхождений. Пройдены настоящие PostgreSQL/Redis, контракты движков, smoke шести инструментов, проверка комплектности runtime-ресурсов и single-container smoke. Линтер и форматирование прошли.
+
+Дополнительно проверен production-образ с полностью пустой `/app`: прямой `-m echo.main --help` и корневой launcher через системный Python завершаются с кодом 0. В этом же образе при UID 10001, read-only root, `cap_drop=ALL`, `no-new-privileges`, 1536 МиБ/1 CPU и writable tmpfs в `/tmp` и `/app` применены миграции из wheel, запущен Worker и подтверждена готовность шести инструментов. Telegram polling заменён локальной проверкой; реальный Telegram/DeepSeek и панель Bothost не использовались. Проверка импорта при скрытой `/app` добавлена в CI.
+
 ## Дополнение 2026-11-07: Bothost и монтирование /app
 
 Исходная ошибка воспроизведена на прежнем runtime-образе: монтирование чистых исходников поверх `/app` скрывало `/app/.venv`, после чего `/usr/local/bin/python` сообщал `No module named 'echo'`. Исправленный образ использует `/opt/echo`, абсолютный Python в CMD и корневой `main.py` для панели. Проверены оба варианта запуска при bind mount исходников без `.venv` и `.env`: `python -m echo.main --help` и `/usr/local/bin/python /app/main.py --help`, код выхода 0.

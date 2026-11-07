@@ -1,12 +1,11 @@
 """Single-container startup over the existing bot, worker, queue and storage."""
 
 import asyncio
-from pathlib import Path
 
 from alembic import command
 from alembic.config import Config
 
-ROOT = Path(__file__).resolve().parents[2]
+from echo.paths import ROOT
 
 
 async def migrate():
