@@ -1,0 +1,104 @@
+name: echo
+x-app: &app
+  image: echo-bot:local
+  build:
+    context: .
+    target: runtime
+  env_file: .env
+  environment:
+    ECHO_DATABASE_URL: postgresql+asyncpg://echo:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres/echo
+    ECHO_REDIS_URL: redis://redis:6379/0
+  networks: [backend, outbound]
+  volumes: [files:/data/echo]
+  restart: unless-stopped
+  read_only: true
+  tmpfs:
+    - /tmp:rw,nosuid,nodev,noexec,size=128m,uid=10001,gid=10001,mode=0700
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  pids_limit: 192
+  mem_limit: 1280m
+  cpus: 1
+  stop_grace_period: 30s
+  logging:
+    driver: json-file
+    options: {max-size: "10m", max-file: "3"}
+
+services:
+  postgres:
+    image: postgres:17-alpine@sha256:266d3c257594e195b309ae9d1805e54c788f1d7b375f56bf6c367aac6c917e7b
+    environment:
+      POSTGRES_USER: echo
+      POSTGRES_DB: echo
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+    volumes: [postgres:/var/lib/postgresql/data]
+    networks: [backend]
+    mem_limit: 384m
+    cpus: 0.5
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U echo -d echo"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+
+  redis:
+    image: redis:8-alpine@sha256:1166a1ab81198ff768528df2c9e668c82206aae3ef4af2757efac386376fb79c
+    command: [redis-server, --appendonly, "yes", --appendfsync, everysec, --maxmemory, 96mb, --maxmemory-policy, noeviction]
+    volumes: [redis:/data]
+    networks: [backend]
+    mem_limit: 192m
+    cpus: 0.5
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+
+  migrate:
+    <<: *app
+    command: [alembic, upgrade, head]
+    restart: "no"
+    mem_limit: 512m
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+
+  worker:
+    <<: *app
+    command: [python, -m, echo.main, worker]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+    healthcheck:
+      test: [CMD, python, -m, echo.main, health, --worker]
+      interval: 20s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  bot:
+    <<: *app
+    command: [python, -m, echo.main, bot]
+    mem_limit: 384m
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+    healthcheck:
+      test: [CMD, python, -m, echo.main, health]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  postgres:
+  redis:
+  files:
+networks:
+  backend: {internal: true}
+  outbound: {}

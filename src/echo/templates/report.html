@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="{{ lang }}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
+<title>{{ report.brand }} · {{ report.username }}</title>
+<style>
+:root{color-scheme:light dark;--bg:#f4f7f7;--card:#fff;--ink:#183443;--muted:#526974;--line:#d9e3e4;--accent:#006c77}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 system-ui,sans-serif}
+main{max-width:1040px;margin:auto;padding:32px 20px}header{border-top:4px solid var(--accent);padding-top:20px}
+h1{font-size:clamp(26px,5vw,42px);margin:0}h2{margin:0 0 8px}a{color:var(--accent);overflow-wrap:anywhere}
+.meta,small{color:var(--muted)}.notice{padding:16px;border-left:3px solid var(--accent);background:var(--card)}
+.tools{display:flex;flex-wrap:wrap;gap:12px;margin:24px 0}input,select{font:inherit;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink)}
+input{flex:1;min-width:180px}.card{border:1px solid var(--line);background:var(--card);border-radius:12px;padding:22px;margin:16px 0;overflow-wrap:anywhere}
+.status{font-size:12px;display:inline-block;border:1px solid var(--line);border-radius:6px;padding:3px 7px}
+details{margin:14px 0}summary{cursor:pointer}pre{white-space:pre-wrap}dl{display:grid;grid-template-columns:minmax(100px,1fr) 3fr;gap:8px}dt{color:var(--muted)}dd{margin:0;white-space:pre-wrap}
+[hidden]{display:none!important}@media(prefers-color-scheme:dark){:root{--bg:#101f27;--card:#172b35;--ink:#e5eff0;--muted:#acc2ca;--line:#314951;--accent:#73d9d6}}
+@media print{.tools{display:none}.card{break-inside:avoid}body{background:white;color:black}}
+</style></head><body><main>
+<header><small>{{ report.brand }} / {{ t('report') }}</small><h1>{{ report.username }}</h1>
+<p class="meta">{{ report.created_at }} · {{ report.timezone }} · {{ report.state }} · {{ report.results|length }}</p></header>
+<p class="notice">{{ report.limitations }}</p>
+{% if report.get('coverage_text') %}<p class="notice" style="white-space:pre-line">{{ report.coverage_text }}</p>{% endif %}
+<details><summary>{{ t('parameters') }}</summary><pre>{{ report.parameters|tojson(indent=2) }}</pre><pre>{{ report.engine_progress|tojson(indent=2) }}</pre><pre>{{ report.engine_errors|tojson(indent=2) }}</pre></details>
+<div class="tools"><input id="query" type="search" placeholder="{{ t('local_search') }}" aria-label="{{ t('local_search') }}">
+<select id="status" aria-label="{{ t('filter') }}"><option value="all">{{ t('all') }}</option><option value="match">{{ t('matches') }}</option><option value="error">{{ t('errors') }}</option><option value="disagreement">{{ t('disagreements') }}</option><option value="marked">{{ t('marked') }}</option></select>
+<select id="category" aria-label="{{ t('category') }}"><option value="all">{{ t('all_categories') }}</option>{% for c in ['development','games','education','creative','community','media','commerce','professional','other'] %}<option value="{{ c }}">{{ t(c) }}</option>{% endfor %}</select>
+<select id="personal" aria-label="{{ t('mark') }}"><option value="all">{{ t('all') }}</option><option value="useful">{{ t('useful') }}</option><option value="false_positive">{{ t('false_positive') }}</option></select></div>
+{% for card in report.results %}
+{% set statuses = card.observations|map(attribute='status')|list %}
+<article class="card" data-match="{{ '1' if 'POSSIBLE_MATCH' in statuses else '0' }}" data-error="{{ '1' if statuses|reject('in',['POSSIBLE_MATCH','NOT_FOUND'])|list else '0' }}" data-disagreement="{{ '1' if statuses|unique|list|length > 1 else '0' }}" data-marked="{{ '1' if card.mark else '0' }}" data-personal="{{ card.mark or '' }}" data-category="{{ card.site.category if card.site else 'other' }}">
+<h2>{{ card.name }}</h2>{% if card.url %}<a href="{{ card.url }}" rel="noreferrer noopener">{{ card.url }}</a>{% endif %}
+<p>{{ card.site.description if card.site and card.site.description else t('description_unavailable') }}</p>
+<small>{{ t('origin') }}: {{ card.site.origin if card.site else 'unavailable' }} · {{ t('category') }}: {{ t(card.site.category if card.site else 'other') }}</small>
+{% if card.site %}<ul>{% for a in card.site.activities %}<li>{{ a }}</li>{% endfor %}</ul>{% endif %}
+{% for o in card.observations %}<details><summary><span class="status">{{ o.status }}</span> {{ o.engine }} {{ o.version }}</summary>
+<dl><dt>{{ t('time') }}</dt><dd>{{ o.checked_at }}</dd><dt>{{ t('raw_status') }}</dt><dd>{{ o.raw_status }}</dd><dt>HTTP</dt><dd>{{ o.http_code }}</dd><dt>{{ t('evidence') }}</dt><dd>{{ o.evidence or t('no_evidence') }}</dd><dt>{{ t('rule') }}</dt><dd>{{ o.check_method or '—' }}</dd><dt>{{ t('errors') }}</dt><dd>{{ o.error_type or '—' }}</dd><dt>Final URL</dt><dd>{{ o.final_url or '—' }}</dd></dl></details>{% endfor %}
+<dl><dt>{{ t('mark') }}</dt><dd>{{ card.mark or '—' }}</dd><dt>{{ t('note') }}</dt><dd>{{ card.note or '—' }}</dd></dl>
+{% if card.mark == 'false_positive' %}<p>{{ t('review_reason') }}: {{ t('reason_' + (card.get('false_positive_reason') or 'unspecified')) }}. {{ t('review_notice') }}</p>{% if card.get('reviewed_at') %}<small>{{ card.reviewed_at }}</small>{% endif %}{% endif %}
+{% if card.site %}<p>{{ t('sources') }}: {% for s in card.site.sources %}<a href="{{ s }}" rel="noreferrer noopener">{{ s }}</a> {% endfor %}</p>{% endif %}
+</article>{% endfor %}
+<p class="meta">{{ report.schema_version }} · {{ report.job_id }}</p></main>
+<script>
+const q=document.querySelector('#query'),s=document.querySelector('#status'),c=document.querySelector('#category'),p=document.querySelector('#personal');
+function filter(){for(const item of document.querySelectorAll('.card')){const ok=(s.value==='all'||item.dataset[s.value]==='1')&&(c.value==='all'||item.dataset.category===c.value)&&(p.value==='all'||item.dataset.personal===p.value)&&item.textContent.toLowerCase().includes(q.value.toLowerCase());item.hidden=!ok;}}
+q.addEventListener('input',filter);s.addEventListener('change',filter);c.addEventListener('change',filter);p.addEventListener('change',filter);
+</script></body></html>

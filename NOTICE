@@ -1,0 +1,16 @@
+Echo is an independent application, not an official product of Sherlock,
+Maigret, Telegram, DeepSeek, or age.
+
+Sherlock Project 0.16.2 — Copyright (c) 2019 Sherlock Project — MIT.
+Maigret 0.6.6 — Copyright (c) 2020-2026 Soxoj — MIT.
+Full engine license texts are preserved under licenses/ and in the installed packages.
+
+age is the standard implementation distributed by Debian, under BSD-3-Clause.
+DejaVu fonts, Public Suffix List data and all Python dependencies retain their
+own licenses and notices. See THIRD_PARTY_LICENSES.md and package metadata.
+
+Local tools are unmodified, separate packages: ExifTool (Artistic/GPL),
+WhatWeb (GPL-2.0-or-later), Tesseract and traineddata, ZXing-C++, Trafilatura,
+dnstwist, dnspython, Pillow, file/libmagic and libseccomp.
+Their package copyright/license texts remain installed in the image.
+Echo's MIT license does not replace those terms or source obligations.

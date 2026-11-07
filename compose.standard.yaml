@@ -1,0 +1,24 @@
+services:
+  postgres:
+    mem_limit: 512m
+    cpus: 1
+  redis:
+    mem_limit: 256m
+  worker:
+    mem_limit: 2048m
+    cpus: 2
+    environment:
+      ECHO_RESOURCE_PROFILE: standard
+      ECHO_HEAVY_SLOTS: "2"
+      ECHO_GLOBAL_ACTIVE_JOBS: "3"
+      ECHO_USER_ACTIVE_JOBS: "2"
+      ECHO_SEQUENTIAL_ENGINES: "true"
+      ECHO_OCR_THREADS: "1"
+      ECHO_DISK_QUOTA_MB: "1024"
+  bot:
+    environment:
+      ECHO_RESOURCE_PROFILE: standard
+      ECHO_HEAVY_SLOTS: "2"
+      ECHO_GLOBAL_ACTIVE_JOBS: "3"
+      ECHO_USER_ACTIVE_JOBS: "2"
+      ECHO_DISK_QUOTA_MB: "1024"

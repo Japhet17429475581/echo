@@ -1,0 +1,37 @@
+name: Echo CI
+on: [push, pull_request]
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine@sha256:266d3c257594e195b309ae9d1805e54c788f1d7b375f56bf6c367aac6c917e7b
+        env: {POSTGRES_USER: echo, POSTGRES_PASSWORD: test_only, POSTGRES_DB: echo_test}
+        ports: ["5432:5432"]
+        options: --health-cmd "pg_isready -U echo -d echo_test" --health-interval 5s --health-retries 20
+      redis:
+        image: redis:8-alpine@sha256:1166a1ab81198ff768528df2c9e668c82206aae3ef4af2757efac386376fb79c
+        ports: ["6379:6379"]
+        options: --health-cmd "redis-cli ping" --health-interval 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - uses: astral-sh/setup-uv@v6
+        with: {version: "0.12.17"}
+      - run: sudo apt-get update && sudo apt-get install -y age fonts-dejavu-core
+      - run: uv sync --frozen --extra dev
+      - run: uv run --frozen ruff check src engines tools tests scripts migrations
+      - run: uv run --frozen ruff format --check src engines tools tests scripts migrations
+      - run: uv venv .venv-sherlock && uv pip install --python .venv-sherlock/bin/python --require-hashes -r engines/sherlock/requirements.lock
+      - run: uv venv .venv-maigret && uv pip install --python .venv-maigret/bin/python --require-hashes -r engines/maigret/requirements.lock
+      - run: uv run --frozen pytest -q
+        env:
+          ECHO_TEST_DATABASE_URL: postgresql+asyncpg://echo:test_only@localhost/echo_test
+          ECHO_TEST_REDIS_URL: redis://localhost:6379/15
+          ECHO_TEST_SHERLOCK_PYTHON: .venv-sherlock/bin/python
+          ECHO_TEST_MAIGRET_PYTHON: .venv-maigret/bin/python
+          ECHO_TEST_LIVE_ENGINES: "1"
+      - run: docker build --target runtime -t echo-bot:ci .
+      - run: docker build --target test -t echo-bot:test .
+      - run: docker run --rm echo-bot:test

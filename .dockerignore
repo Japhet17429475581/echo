@@ -1,0 +1,12 @@
+.git
+.env
+.venv*
+.reference
+.cache
+__pycache__
+.pytest_cache
+.ruff_cache
+data
+reports
+*.key
+*.age
