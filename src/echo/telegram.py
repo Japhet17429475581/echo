@@ -29,6 +29,7 @@ from echo.export import ExportError, encrypt, fingerprint
 from echo.i18n import tr
 from echo.intents import local_intent
 from echo.modules import ModuleError
+from echo.polling import PollingDiagnostics, prepare_polling
 from echo.presentation import CATEGORIES, button, card_view, explain, keyboard, progress, results, setup
 from echo.services import Denied, FolderLimited, Limited, StorageLimited
 from echo.storage import Job, User
@@ -736,35 +737,38 @@ class Telegram:
                 parse_mode="HTML", link_preview=LinkPreviewOptions(is_disabled=True)
             ),
         )
-        dispatcher = Dispatcher()
-        dispatcher.include_router(self.router)
+        bot.session.middleware.register(PollingDiagnostics())
+        updater = None
+        try:
+            await prepare_polling(bot)
+            dispatcher = Dispatcher()
+            dispatcher.include_router(self.router)
 
-        @dispatcher.message()
-        async def private_only(message: Message):
-            if message.chat.type != "private":
+            @dispatcher.message(F.chat.type != "private")
+            async def private_only(message: Message):
                 await message.answer(tr("ru", "private_only"))
 
-        @dispatcher.errors()
-        async def safe_error(event):
-            # aiogram's default exception logger includes Update content: replace it completely.
-            log.warning("telegram_operation_failed type=%s", type(event.exception).__name__)
-            msg = event.update.message or (
-                event.update.callback_query.message if event.update.callback_query else None
-            )
-            if msg and msg.chat.type == "private":
-                with contextlib.suppress(Exception):
-                    await msg.answer(tr("ru", "error"))
-            return True
+            @dispatcher.errors()
+            async def safe_error(event):
+                # The SDK's default exception logger includes Update content: replace it completely.
+                log.warning("telegram_operation_failed type=%s", type(event.exception).__name__)
+                msg = event.update.message or (
+                    event.update.callback_query.message if event.update.callback_query else None
+                )
+                if msg and msg.chat.type == "private":
+                    with contextlib.suppress(Exception):
+                        await msg.answer(tr("ru", "error"))
+                return True
 
-        updater = asyncio.create_task(self.progress_loop(bot))
-        try:
+            updater = asyncio.create_task(self.progress_loop(bot))
             await dispatcher.start_polling(
                 bot,
                 allowed_updates=["message", "callback_query"],
                 handle_signals=True,
-                close_bot_session=True,
+                close_bot_session=False,
             )
         finally:
-            updater.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await updater
+            if updater is not None:
+                updater.cancel()
+                await asyncio.gather(updater, return_exceptions=True)
+            await bot.session.close()

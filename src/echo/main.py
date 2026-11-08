@@ -38,6 +38,7 @@ class CatalogEntry(BaseModel):
 def configure_logs():
     # Never install SDK/ORM request loggers, or emit Update/exception representations.
     logging.basicConfig(level=logging.WARNING, format="%(asctime)s %(name)s %(levelname)s %(message)s")
+    logging.getLogger("echo").setLevel(logging.INFO)
     for name in ("aiogram", "sqlalchemy", "httpx", "httpcore", "aiohttp", "redis"):
         logging.getLogger(name).setLevel(logging.CRITICAL)
 
@@ -114,7 +115,7 @@ async def run(args):
                 from echo.hosting import supervise
 
                 await redis.ping()
-                logging.getLogger("echo").warning("starting_bot_and_worker")
+                logging.getLogger("echo").info("starting_bot_and_worker")
                 await supervise(
                     Telegram(config, jobs, redis, Reports(jobs, config), gateway, admin).run(),
                     Worker(config, jobs, redis, catalog).run(),

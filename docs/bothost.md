@@ -38,7 +38,19 @@ Bothost передаёт Telegram-токен в `BOT_TOKEN`; ECHO его при�
 
 ## Проверка
 
-После успешных миграций в журнале появляется `starting_bot_and_worker`. Проверка из терминала контейнера:
+Домен, HTTPS-сертификат, webhook-URL и входящий порт для ECHO не нужны: бот использует long polling и исходящие HTTPS-запросы к Telegram. [Документация aiogram](https://docs.aiogram.dev/en/latest/dispatcher/long_polling.html). На один токен должна работать одна polling-копия.
+
+После успешных миграций в журнале появляется INFO `starting_bot_and_worker`. Это ещё не подтверждение соединения с Telegram. Дальше должны появиться:
+
+- `telegram_connected username=@…` — токен принят, указан фактический бот. Сверьте username с ботом, которому отправляете `/start`. Если задан непустой `ECHO_BOT_TOKEN`, он имеет приоритет над `BOT_TOKEN`.
+- `telegram_polling_starting` — подготовка polling завершена.
+- `telegram_polling_ready` — первый запрос обновлений успешно выполнен; при пустой очереди это может занять до одного polling-интервала. Это подтверждение соединения, но не доставки конкретного ответа.
+
+Если обнаружен прежний webhook, ECHO удаляет его перед polling с `drop_pending_updates=false`, сохраняя ожидающие сообщения. [Telegram Bot API](https://core.telegram.org/bots/api#deletewebhook) описывает переключение обратно на getUpdates. Проверка Telegram на старте ограничена 15 секундами.
+
+Диагностика `telegram_request_failed` показывает только метод API и класс ошибки, без токена, webhook-URL и текста сообщений. `TelegramUnauthorizedError` означает отклонённый токен; `TelegramNetworkError`/`TimeoutError` — проблему соединения с API; `TelegramConflictError` в getUpdates после подготовки polling обычно означает вторую polling-копию. Стандартные SDK-логи с содержимым исключений и Update остаются отключены, повтор запросов сохраняет механизм aiogram.
+
+Проверка worker из терминала контейнера:
 
 ```sh
 /opt/echo/bin/python -m echo.main health --worker
